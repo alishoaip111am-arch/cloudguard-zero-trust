@@ -14,18 +14,20 @@ The engine returns one of three decisions:
 
 Key Features
 
-- Role-based access control.
+- Role-based access control (RBAC).
 - Risk-based access evaluation.
 - Device security and patch-status checks.
 - Country-based access policies.
 - MFA step-up decisions.
-- Fail-closed validation.
+- Fail-closed request validation.
 - UTC audit logging.
 - Repeated-denial detection.
 - JSON audit log export.
 - Automated unit tests.
 
 Risk Model
+
+The engine calculates risk using the following signals:
 
 Risk Signal| Points
 Unmanaged device| +30
@@ -90,10 +92,12 @@ Every request is validated before access is evaluated. Role permissions are enfo
 
 Limitations
 
-This is an educational simulator, not production-ready security software. It does not connect to real identity providers, endpoint management systems, MFA services, geolocation databases, or cloud infrastructure.
+This is an educational simulator, not production-ready security software.
+
+It does not connect to real identity providers, endpoint management systems, MFA services, geolocation databases, or cloud infrastructure.
 
 Its risk scores and policies are illustrative.
 
 Author
 
-Ali Shoaib
+Ali Shuayb
