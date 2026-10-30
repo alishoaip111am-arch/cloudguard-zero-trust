@@ -1,106 +1,83 @@
-CloudGuard ZT — Zero-Trust Access Decision Engine
+CloudGuard Zero Trust
 
-CloudGuard ZT is a small educational Zero-Trust access decision engine written in Python.
+An Educational Zero-Trust Access Decision Engine built with Python.
 
-It evaluates access requests using identity, role permissions, device security posture, location, and Multi-Factor Authentication (MFA).
+Overview
 
-The engine returns one of three decisions:
+CloudGuard Zero Trust is a Python-based educational project that demonstrates how a Zero-Trust security model can evaluate access requests using identity, device security, location, authentication, and resource sensitivity.
 
-- "ALLOW" — Access is permitted.
-- "STEP_UP" — Additional MFA verification is required.
-- "DENY" — Access is rejected.
+The system evaluates every request independently and returns one of three decisions:
+
+- ALLOW: Access is permitted.
+- STEP_UP: Additional authentication (MFA) is required.
+- DENY: Access is rejected.
 
 Key Features
 
 - Role-based access control.
 - Risk-based access evaluation.
-- Device security checks.
-- Country-based access policy.
-- MFA verification and step-up decisions.
+- Device security and patch-status checks.
+- Country-based access policies.
+- Multi-factor authentication (MFA) step-up decisions.
 - Fail-closed validation for invalid requests.
-- Audit logging with UTC timestamps.
+- UTC audit logging.
 - Detection of repeated access denials.
-- JSON export of audit records.
+- JSON audit log export.
 - Automated unit tests using Python's standard library.
 
-Risk Model
+Risk Evaluation
 
-Risk signal| Risk points
+The system assigns risk points based on request conditions:
+
+Condition| Risk Points
 Unmanaged device| +30
 Unpatched device| +20
-Country outside allowed list| +25
-MFA not verified| +20
+Unusual country| +25
+MFA not enabled| +20
 
-Maximum risk for ALLOW
-
-Resource sensitivity| Maximum risk
-Low| 40
-Medium| 25
-High| 10
-
-Medium- and high-sensitivity resources require MFA. If MFA alone can bring the risk within the allowed threshold, the engine returns "STEP_UP"; otherwise, it returns "DENY".
-
-Role Permissions
-
-The educational role hierarchy is:
-
-- Guest: Level 1
-- Employee: Level 2
-- Admin: Level 3
-
-A role must meet or exceed the sensitivity level of the requested resource.
-
-Project Structure
-
-cloudguard-zero-trust-engine/
-├── cloudguard.py
-├── main.py
-├── README.md
-├── pyproject.toml
-└── tests/
-    ├── __init__.py
-    └── test_cloudguard.py
+Access decisions also consider the user's role and the requested resource's sensitivity.
 
 Requirements
 
 - Python 3.10 or later.
-- No third-party dependencies.
+- No third-party Python packages required.
 
-Run the Project
+How to Run
 
-Run the example scenarios:
+Run the default demonstration:
 
 python main.py
 
-Print the results as JSON:
+Run the sample requests:
 
-python main.py --json
+python main.py --file requests.json
 
-Run Tests
+Run with JSON output:
 
-Run the automated test suite:
+python main.py --file requests.json --json
+
+Run the unit tests:
 
 python -m unittest discover -s tests -v
 
-Security Design Principles
+Project Structure
 
-CloudGuard ZT demonstrates several security concepts:
+- "cloudguard.py" — Core access-control and risk-evaluation logic.
+- "main.py" — Command-line interface.
+- "requests.json" — Sample access requests.
+- "tests/" — Automated unit tests.
+- ".github/workflows/" — GitHub Actions workflow.
 
-1. Never trust an access request by default.
-2. Validate request data before making an access decision.
-3. Enforce permissions before evaluating risk.
-4. Use multiple security signals instead of relying on a single factor.
-5. Fail closed when request or policy validation fails.
-6. Record access decisions for auditing.
+Security Approach
+
+CloudGuard follows the principle of "Never Trust, Always Verify."
+
+Each access request is evaluated using the available security context. Invalid or incomplete requests are handled with a fail-closed approach.
 
 Limitations
 
-This project is an educational simulator, not production-ready security software.
-
-It does not connect to real identity providers, endpoint management systems, MFA services, geolocation databases, or cloud infrastructure.
-
-Its risk scores and policies are illustrative and should be reviewed and calibrated before any real-world use.
+This project is an educational simulation intended to demonstrate Zero-Trust access decision concepts. It is not a production-ready security platform and does not replace a complete identity provider, endpoint protection system, or enterprise security infrastructure.
 
 Author
 
-Developed as a Python project to explore Zero-Trust security principles, access control, risk evaluation, and automated testing.
+Ali Shoaib
