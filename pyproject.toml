@@ -1,9 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "cloudguard-zt"
-version = "0.1.0"
-description = "An educational, explainable Zero-Trust Access Decision Engine"
+version = "1.0.0"
+description = "An educational Zero-Trust access decision engine written in Python."
+readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+{ name = "CloudGuard ZT Contributor" }
+]
 dependencies = []
 
-[project.scripts]
-cloudguard = "main:main"
+[tool.setuptools]
+py-modules = ["cloudguard"]

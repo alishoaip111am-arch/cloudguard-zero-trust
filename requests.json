@@ -1,0 +1,9 @@
+[
+  {"user": "ali", "role": "employee", "resource": "wiki", "sensitivity": "low",
+   "device_managed": true, "device_patched": true, "country": "LY", "mfa_verified": true},
+  {"user": "omar", "role": "employee", "resource": "finance-app", "sensitivity": "medium",
+   "device_managed": true, "device_patched": false, "country": "LY", "mfa_verified": false},
+  {"user": "lina", "role": "guest", "resource": "payroll-db", "sensitivity": "high",
+   "device_managed": true, "device_patched": true, "country": "TR", "mfa_verified": true},
+  {"user": "bad-entry"}
+]

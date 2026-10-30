@@ -1,1 +1,1 @@
-"""Test suite marker for CloudGuard ZT."""
+"""CloudGuard test package."""
