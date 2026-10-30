@@ -7,6 +7,11 @@ on:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -14,7 +19,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.python-version }}
 
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
+
+      - name: Test demo execution
+        run: python main.py --demo
+
+      - name: Test JSON requests
+        run: python main.py --file requests.json
