@@ -98,6 +98,3 @@ It does not connect to real identity providers, endpoint management systems, MFA
 
 Its risk scores and policies are illustrative.
 
-Author
-
-Ali Shuayb
