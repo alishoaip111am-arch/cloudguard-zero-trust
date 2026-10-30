@@ -1,106 +1,105 @@
-CloudGuard ZT — Zero-Trust Access Decision Engine
+# CloudGuard Zero Trust
 
-CloudGuard ZT is a small educational Zero-Trust access decision engine written in Python.
+An educational Python engine that evaluates access requests using role
+authorization, device posture, country policy, MFA status, and risk scoring.
+It returns **ALLOW**, **STEP_UP**, or **DENY** and records each decision.
 
-It evaluates access requests using identity, role permissions, device security posture, location, and Multi-Factor Authentication (MFA).
+## Decision model
 
-The engine returns one of three decisions:
+| Signal | Risk points |
+| --- | ---: |
+| Device is not managed | 30 |
+| Device is not patched | 20 |
+| Country is outside the allowed list | 25 |
+| MFA is not verified | 20 |
 
-- "ALLOW" — Access is permitted.
-- "STEP_UP" — Additional MFA verification is required.
-- "DENY" — Access is rejected.
+| Resource sensitivity | Maximum risk for ALLOW |
+| --- | ---: |
+| Low | 40 |
+| Medium | 25 |
+| High | 10 |
 
-Key Features
+Role authorization is checked independently of the risk threshold. Medium- and
+high-sensitivity resources require MFA; when appropriate, the engine returns
+`STEP_UP` rather than granting access.
 
-- Role-based access control.
-- Risk-based access evaluation.
-- Device security checks.
-- Country-based access policy.
-- MFA verification and step-up decisions.
-- Fail-closed validation for invalid requests.
-- Audit logging with UTC timestamps.
-- Detection of repeated access denials.
-- JSON export of audit records.
-- Automated unit tests using Python's standard library.
+## Security controls demonstrated
 
-Risk Model
+- **Fail-closed validation:** malformed requests and invalid policy values are
+  denied.
+- **Output-injection protection:** user and resource labels are bounded and
+  control characters are escaped before they appear in text audit output.
+- **Repeated-denial detection:** the audit log detects consecutive denials for
+  a resource and probing across resources within the most recent request window.
+  The window and denial threshold can be configured through the
+  `AuditLog.alerts(limit=..., window=...)` Python API; they are not CLI options.
+- **Auditability:** decisions include UTC timestamps, risk scores, reasons, and
+  can be exported as JSON.
 
-Risk signal| Risk points
-Unmanaged device| +30
-Unpatched device| +20
-Country outside allowed list| +25
-MFA not verified| +20
+## Example output
 
-Maximum risk for ALLOW
+Running `python main.py` produces output similar to:
 
-Resource sensitivity| Maximum risk
-Low| 40
-Medium| 25
-High| 10
+```text
+[ALLOW  ] ali        -> wiki         risk   0  all checks passed
+[STEP_UP] ali        -> finance-app  risk  20  MFA not verified (+20); step-up MFA required
+[DENY   ] omar       -> finance-app  risk  50  device not managed (+30); MFA not verified (+20); too risky even after MFA
 
-Medium- and high-sensitivity resources require MFA. If MFA alone can bring the risk within the allowed threshold, the engine returns "STEP_UP"; otherwise, it returns "DENY".
+Allowed 1 | Step-up 1 | Denied 7
+ALERT: sam denied 3 times in a row on payroll-db
+```
 
-Role Permissions
-
-The educational role hierarchy is:
-
-- Guest: Level 1
-- Employee: Level 2
-- Admin: Level 3
-
-A role must meet or exceed the sensitivity level of the requested resource.
-
-Project Structure
-
-cloudguard-zero-trust-engine/
-├── cloudguard.py
-├── main.py
-├── README.md
-├── pyproject.toml
-└── tests/
-    ├── __init__.py
-    └── test_cloudguard.py
-
-Requirements
+## Requirements
 
 - Python 3.10 or later.
 - No third-party dependencies.
 
-Run the Project
+## Run
 
-Run the example scenarios:
+Run the built-in demonstration:
 
+```bash
 python main.py
+```
 
-Print the results as JSON:
+Evaluate requests from the included JSON file:
 
-python main.py --json
+```bash
+python main.py requests.json
+```
 
-Run Tests
+Export only machine-readable audit JSON:
 
-Run the automated test suite:
+```bash
+python main.py requests.json --json
+```
 
+Run the test suite:
+
+```bash
 python -m unittest discover -s tests -v
+```
 
-Security Design Principles
+## Project structure
 
-CloudGuard ZT demonstrates several security concepts:
+```text
+cloudguard-zero-trust/
+├── .github/workflows/tests.yml
+├── tests/
+│   ├── __init__.py
+│   └── test_cloudguard.py
+├── cloudguard.py
+├── main.py
+├── requests.json
+├── .gitignore
+├── LICENSE
+└── README.md
+```
 
-1. Never trust an access request by default.
-2. Validate request data before making an access decision.
-3. Enforce permissions before evaluating risk.
-4. Use multiple security signals instead of relying on a single factor.
-5. Fail closed when request or policy validation fails.
-6. Record access decisions for auditing.
+## Limitations
 
-Limitations
-
-This project is an educational simulator, not production-ready security software.
-
-It does not connect to real identity providers, endpoint management systems, MFA services, geolocation databases, or cloud infrastructure.
-
-Its risk scores and policies are illustrative and should be reviewed and calibrated before any real-world use.
-
-Author
-
-Developed as a Python project to explore Zero-Trust security principles, access control, risk evaluation, and automated testing.
+This is an educational simulator, not production-ready security software. It
+does not integrate with real identity providers, endpoint-management platforms,
+MFA services, geolocation databases, or cloud infrastructure. Policies and risk
+scores are illustrative, and audit records remain in memory for the lifetime
+of the process.

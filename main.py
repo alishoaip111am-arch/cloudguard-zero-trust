@@ -1,165 +1,95 @@
-"""CloudGuard ZT: Command-line Zero-Trust demonstration."""
+"""CloudGuard ZT command line: python main.py [requests.json] [--json]."""
 
 import argparse
 import json
+import os
 import sys
-from pathlib import Path
 
-from cloudguard import ALLOW, DENY, STEP_UP, AuditLog, Request, evaluate
+from cloudguard import ALLOW, DENY, STEP_UP, AuditLog, parse
 
 ALLOWED_COUNTRIES = {"LY", "TR"}
 
+BASE = {
+    "user": "ali", "role": "employee", "resource": "wiki",
+    "sensitivity": "low", "device_managed": True, "device_patched": True,
+    "country": "LY", "mfa_verified": True,
+}
 
-def show_result(label: str, request, log: AuditLog) -> None:
-    """Evaluate a request and display its decision."""
-    decision = evaluate(request, ALLOWED_COUNTRIES, log)
-
-    print("\n" + "=" * 65)
-    print(label)
-    print("=" * 65)
-    print(f"User:       {decision.user}")
-    print(f"Resource:   {decision.resource}")
-    print(f"Decision:   {decision.action}")
-    print(f"Risk score: {decision.risk}")
-
-    for reason in decision.reasons:
-        print(f"  - {reason}")
-
-    if decision.action == STEP_UP:
-        print("\nAction required: Complete MFA and submit again.")
-    elif decision.action == DENY:
-        print("\nAccess denied.")
+DEMO = [
+    {},
+    {"resource": "finance-app", "sensitivity": "medium", "mfa_verified": False},
+    {"user": "omar", "resource": "finance-app", "sensitivity": "medium",
+     "device_managed": False, "mfa_verified": False},
+    {"user": "lina", "role": "guest", "resource": "admin-panel",
+     "sensitivity": "high"},
+    {"user": "noor", "role": "admin", "resource": "admin-panel",
+     "sensitivity": "high", "country": "RU", "device_patched": False},
+    {"role": "root"},
+] + [{"user": "sam", "role": "guest", "resource": "payroll-db",
+      "sensitivity": "high"}] * 3
 
 
-def run_demo(log: AuditLog) -> None:
-    """Run the built-in demonstration scenarios."""
-    base = {
-        "user": "ali",
-        "role": "employee",
-        "resource": "wiki",
-        "sensitivity": "low",
-        "device_managed": True,
-        "device_patched": True,
-        "country": "LY",
-        "mfa_verified": True,
-    }
-
-    scenarios = [
-        ("1. Normal request from a trusted device", base),
-        ("2. Medium resource without MFA",
-         {**base, "sensitivity": "medium", "mfa_verified": False}),
-        ("3. Unmanaged device and missing MFA",
-         {**base, "user": "omar", "sensitivity": "medium",
-          "device_managed": False, "mfa_verified": False}),
-        ("4. Guest attempts to access a high-sensitivity resource",
-         {**base, "user": "lina", "role": "guest", "sensitivity": "high"}),
-        ("5. Admin using an unpatched device from an unusual country",
-         {**base, "user": "noor", "role": "admin", "sensitivity": "high",
-          "country": "RU", "device_patched": False}),
-        ("6. Invalid role", {**base, "role": "root"}),
-    ]
-
-    for label, data in scenarios:
-        show_result(label, Request(**data), log)
-
-    for attempt in range(1, 4):
-        data = {**base, "user": "sam", "role": "guest",
-                "resource": "payroll-db", "sensitivity": "high"}
-        show_result(f"7.{attempt} Repeated attempt to access payroll database",
-                    Request(**data), log)
+def show(decision) -> None:
+    print(f"[{decision.action:<7}] {decision.user:<10} -> "
+          f"{decision.resource:<12} risk {decision.risk:>3}  "
+          f"{'; '.join(decision.reasons)}")
 
 
-def run_file(file_path: str, log: AuditLog) -> None:
-    """Load and evaluate access requests from a JSON file."""
-    path = Path(file_path)
-
+def load(path: str) -> list:
     try:
-        with path.open("r", encoding="utf-8") as file:
+        with open(path, encoding="utf-8") as file:
             data = json.load(file)
-    except FileNotFoundError:
-        raise ValueError(f"File not found: {path}") from None
-    except json.JSONDecodeError as error:
-        raise ValueError(
-            f"Invalid JSON at line {error.lineno}, column {error.colno}."
-        ) from None
-    except OSError as error:
-        raise ValueError(f"Could not read file: {error}") from None
-
-    if not isinstance(data, list):
-        raise ValueError("JSON root must be a list of access requests.")
-    if not data:
-        raise ValueError("The JSON file contains no access requests.")
-
-    print(f"Loaded {len(data)} request(s) from {path}")
-
-    for index, item in enumerate(data, start=1):
-        print(f"\nProcessing request {index}/{len(data)}")
-
-        request = None
-        if isinstance(item, dict):
-            try:
-                request = Request(**item)
-            except (TypeError, ValueError):
-                request = None
-
-        if request is None:
-            show_result(f"Request {index}: Invalid request format", None, log)
-        else:
-            show_result(f"Request {index}: JSON access request", request, log)
+    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as error:
+        raise SystemExit(f"Error: cannot read {path}: {error}") from None
+    if not isinstance(data, list) or not data:
+        raise SystemExit("Error: JSON must be a non-empty list of requests.")
+    return data
 
 
-def show_summary(log: AuditLog) -> None:
-    """Display the audit summary and repeated-denial alerts."""
-    print("\n" + "=" * 65)
-    print("AUDIT SUMMARY")
-    print("=" * 65)
-    print(f"Allowed:  {log.count(ALLOW)}")
-    print(f"Step-up:  {log.count(STEP_UP)}")
-    print(f"Denied:   {log.count(DENY)}")
-
-    alerts = log.repeated_denials()
-    if alerts:
-        print("\nSECURITY ALERTS")
-        for user, resource, count in alerts:
-            print(f"ALERT: {user} was denied {count} consecutive "
-                  f"times on {resource}.")
-    else:
-        print("\nNo repeated-denial alerts.")
-
-
-def main() -> int:
-    """Parse command-line options and run CloudGuard."""
-    parser = argparse.ArgumentParser(
-        description="CloudGuard ZT - Zero-Trust access decision engine."
-    )
-    source = parser.add_mutually_exclusive_group()
-    source.add_argument("--file", metavar="PATH",
-                        help="Read access requests from a JSON file.")
-    source.add_argument("--demo", action="store_true",
-                        help="Run the built-in demonstration scenarios.")
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="CloudGuard ZT demo")
+    parser.add_argument("file", nargs="?", help="JSON file of requests "
+                        "(default: built-in demo)")
     parser.add_argument("--json", action="store_true",
-                        help="Print the audit log as JSON.")
+                        help="print only the audit log as valid JSON")
+    args = parser.parse_args(argv)
 
-    args = parser.parse_args()
+    if args.file is not None:
+        items = load(args.file)
+    else:
+        items = [{**BASE, **item} for item in DEMO]
     log = AuditLog()
 
-    try:
-        if args.file:
-            run_file(args.file, log)
-        else:
-            run_demo(log)
+    for item in items:
+        try:
+            log.evaluate(parse(item), ALLOWED_COUNTRIES)
+        except ValueError as error:
+            known = item if isinstance(item, dict) else {}
+            log.reject(str(error), known.get("user"), known.get("resource"))
 
-        show_summary(log)
+    if args.json:
+        print(log.to_json())
+        return 0
 
-        if args.json:
-            print("\nAUDIT LOG JSON")
-            print(log.to_json())
-    except ValueError as error:
-        print(f"Error: {error}", file=sys.stderr)
-        return 1
+    for decision in log.entries:
+        show(decision)
 
+    print(f"\nAllowed {log.count(ALLOW)} | Step-up {log.count(STEP_UP)} | "
+          f"Denied {log.count(DENY)}")
+    for alert in log.alerts():
+        print(f"ALERT: {alert}")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        # A downstream command (for example, `head`) closed the pipe early.
+        # Redirect stdout before interpreter shutdown to avoid a second flush error.
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        try:
+            os.dup2(devnull, sys.stdout.fileno())
+        finally:
+            os.close(devnull)
+        sys.exit(0)

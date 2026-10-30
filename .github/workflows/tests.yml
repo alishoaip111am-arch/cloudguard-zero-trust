@@ -7,6 +7,10 @@ on:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -14,7 +18,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.python-version }}
 
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
+
+      - name: Verify demonstration results
+        run: |
+          python main.py > demo.txt
+          grep -Fq "Allowed 1 | Step-up 1 | Denied 7" demo.txt
+          grep -Fq "ALERT: sam denied 3 times in a row on payroll-db" demo.txt
