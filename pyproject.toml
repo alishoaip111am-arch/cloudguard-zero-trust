@@ -1,0 +1,9 @@
+[project]
+name = "cloudguard-zt"
+version = "0.1.0"
+description = "An educational, explainable Zero-Trust Access Decision Engine"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+cloudguard = "main:main"
